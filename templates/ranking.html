@@ -1,0 +1,112 @@
+<!-- ranking.html (Updated with vertical scrolling and download links) -->
+{% extends "base.html" %}
+{% block title %}Best Match Resume - Resume Portal{% endblock %}
+{% block head %}
+<style>
+  .ranking-container {
+    background-color: #2B2D3A;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 30px;
+    margin-top: 20px;
+  }
+  .ranking-container h2 {
+    margin-bottom: 20px;
+    color: #2ed3de;
+    font-weight: 700;
+  }
+  .ranking-container .btn-primary {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 10px 25px;
+  }
+  .ranking-container .form-control {
+    background-color: #1F1F2E;
+    border: 1px solid #444;
+    color: #fff;
+  }
+  .ranking-container .form-control:focus {
+    background-color: #1c1c2a;
+    border-color: #2ed3de;
+    color: #fff;
+  }
+  .card {
+    margin-top: 20px;
+    border-radius: 8px;
+    background-color: #1F1F2E;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .card-header {
+    background: linear-gradient(90deg, #2ed3de, #337ee9);
+    color: #fff;
+    border-radius: 8px 8px 0 0;
+    font-weight: 600;
+  }
+  /* Dark table style to match the theme */
+  .table-dark.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255,255,255,0.05);
+  }
+  .table-dark.table-striped tbody tr:nth-of-type(even) {
+    background-color: rgba(255,255,255,0.1);
+  }
+  .table-dark td, .table-dark th {
+    border-color: #444;
+  }
+  /* Container for vertical scrolling */
+  .table-container {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .ranking-container hr {
+    border-top: 1px solid #444;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="ranking-container">
+  <h2>Find Best Matching Resumes</h2>
+  <form method="POST">
+    <div class="form-group">
+      <label for="jdText">Enter Job Description (JD):</label>
+      <textarea name="jd_text" id="jdText" class="form-control" rows="6" placeholder="Paste the job description here..."></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Find Best Matches</button>
+  </form>
+  <hr>
+  {% if rankings %}
+    <div class="card">
+      <div class="card-header">
+        <h4>Ranked Resumes</h4>
+      </div>
+      <div class="card-body">
+        <!-- Use a container for vertical scrolling if the list is long -->
+        <div class="table-container">
+          <table class="table table-dark table-striped">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Resume File</th>
+                <th>Similarity Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in rankings %}
+                <tr>
+                  <td>{{ item.rank }}</td>
+                  <td>
+                    <!-- When clicked, triggers a resume download route -->
+                    <a href="{{ url_for('download_resume', filename=item.resume_file) }}" style="color: #2ed3de; font-weight: 600;">
+                      {{ item.resume_file }}
+                    </a>
+                  </td>
+                  <td>{{ item.similarity_score }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

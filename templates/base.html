@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Resume Clustering & Ranking{% endblock %}</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Custom AI-inspired Styling -->
+  <style>
+    body {
+      background: linear-gradient(45deg, #1F1F2E, #2E3141);
+      min-height: 100vh;
+      font-family: 'Open Sans', sans-serif;
+      color: #E0E0E0;
+    }
+    .navbar {
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #131420, #2D2F3B);
+      border-bottom: 1px solid #444;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .navbar-brand {
+      font-weight: 600;
+      font-size: 1.4rem;
+      color: #fff !important;
+    }
+    .navbar-nav .nav-link {
+      color: #fff !important;
+      transition: color 0.2s ease;
+    }
+    .navbar-nav .nav-link:hover {
+      color: #2ed3de !important;
+    }
+    /* Card styling */
+    .card {
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      background-color: #2B2D3A;
+      color: #E0E0E0;
+    }
+    .card-header {
+      background: linear-gradient(90deg, #2ed3de, #337ee9);
+      color: #fff;
+      border-radius: 8px 8px 0 0;
+      font-weight: 600;
+    }
+    /* Alerts */
+    .alert-info {
+      background-color: #2E3244;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    /* Buttons */
+    .btn-primary,
+    .btn-success,
+    .btn-danger {
+      border: none;
+      font-weight: 600;
+      border-radius: 25px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #2ed3de, #337ee9);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(90deg, #24bdc8, #2a6bcd);
+    }
+    .btn-success {
+      background: linear-gradient(90deg, #4be274, #28a745);
+      color: #fff;
+    }
+    .btn-success:hover {
+      background: linear-gradient(90deg, #37b75b, #218838);
+    }
+    .btn-danger {
+      background: linear-gradient(90deg, #e23f3f, #c21313);
+      color: #fff;
+    }
+    .btn-danger:hover {
+      background: linear-gradient(90deg, #c53434, #a10d0d);
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="{{ url_for('home') }}">Resume Portal</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+      <span class="navbar-toggler-icon" style="color:#fff;"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+       <ul class="navbar-nav ml-auto">
+         <li class="nav-item">
+           <a class="nav-link" href="{{ url_for('clustering') }}">Clustering</a>
+         </li>
+         <li class="nav-item">
+           <a class="nav-link" href="{{ url_for('ranking') }}">Best Match Resume</a>
+         </li>
+         <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('chatbot') }}">Chatbot</a>
+          </li>
+       </ul>
+    </div>
+  </nav>
+  <div class="container">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-info">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+  <!-- jQuery and Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

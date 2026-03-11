@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Chatbot - Resume Portal{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<style>
+  /* Fixed height chat window */
+  #chat-window {
+    height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #444;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #2B2D3A;
+  }
+  /* Message bubble styling */
+  .chat-message {
+    max-width: 70%;
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 20px;
+    clear: both;
+    word-wrap: break-word;
+  }
+  .chat-message.user {
+    background-color: #337ee9;
+    color: #fff;
+    float: right;
+    border-radius: 20px 20px 0 20px;
+  }
+  .chat-message.bot {
+    background-color: #444;
+    color: #fff;
+    float: left;
+    border-radius: 20px 20px 20px 0;
+  }
+  .chat-message::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  /* Chat form styling */
+  #chat-input {
+    border-radius: 25px;
+    padding: 10px 20px;
+  }
+  #chat-form button {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, #2ed3de, #337ee9);
+    border: none;
+    color: #fff;
+    transition: background-color 0.3s ease, opacity 0.3s ease;
+  }
+  #chat-form button:hover {
+    background: linear-gradient(90deg, #24bdc8, #2a6bcd);
+  }
+  #chat-form button.loading {
+    opacity: 0.6;
+    background: #222;
+    pointer-events: none;
+  }
+  /* Retrain button styling */
+  #retrainBtn {
+    border-radius: 25px;
+    font-weight: 600;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, #f0ad4e, #ec971f);
+    border: none;
+    color: #fff;
+    transition: background-color 0.3s ease, opacity 0.3s ease;
+  }
+  #retrainBtn:hover {
+    background: linear-gradient(90deg, #d98c2d, #d87c00);
+  }
+  #retrainBtn.loading {
+    opacity: 0.6;
+    background: #222;
+    pointer-events: none;
+  }
+  /* Circular loader */
+  #circular-loader {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid #337ee9;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+    display: none;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h2>Chatbot</h2>
+  <div id="chat-window" class="mb-3">
+    <div id="chat-body"></div>
+  </div>
+  <form id="chat-form">
+    <div class="input-group">
+      <input type="text" id="chat-input" class="form-control" placeholder="Type your message...">
+      <div class="input-group-append">
+        <button type="submit" id="sendBtn" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+  </form>
+  <!-- Retrain Model Section -->
+  <div class="mt-4">
+    <button id="retrainBtn" class="btn btn-warning">Retrain Model</button>
+    <!-- Circular loader -->
+    <div id="circular-loader"></div>
+    <!-- Steps container -->
+    <div id="retrainSteps" class="mt-3"></div>
+    <div id="retrainStatus" class="mt-2"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('chat-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const chatBody = document.getElementById('chat-body');
+    
+    // User message
+    const userMsg = document.createElement('div');
+    userMsg.className = 'chat-message user animate__animated animate__fadeInRight';
+    userMsg.innerText = "You: " + message;
+    chatBody.appendChild(userMsg);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.classList.add('loading');
+    sendBtn.disabled = true;
+    
+    input.value = '';
+    
+    fetch('{{ url_for("chatbot") }}', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ message: message })
+    })
+    .then(response => response.json())
+    .then(data => {
+         const botMsg = document.createElement('div');
+         botMsg.className = 'chat-message bot animate__animated animate__fadeInLeft';
+         if (data.response) {
+             botMsg.innerText = "Bot: " + data.response;
+         } else if (data.error) {
+             botMsg.innerText = "Error: " + data.error;
+         }
+         chatBody.appendChild(botMsg);
+         chatBody.scrollTop = chatBody.scrollHeight;
+         sendBtn.classList.remove('loading');
+         sendBtn.disabled = false;
+    })
+    .catch(error => {
+         console.error("Error:", error);
+         sendBtn.classList.remove('loading');
+         sendBtn.disabled = false;
+    });
+});
+
+// Retrain model
+document.getElementById('retrainBtn').addEventListener('click', function() {
+    if (!confirm("Are you sure you want to retrain the model with updated data?")) {
+        return;
+    }
+    const retrainBtn = document.getElementById('retrainBtn');
+    const loader = document.getElementById('circular-loader');
+    const stepsContainer = document.getElementById('retrainSteps');
+    const retrainStatus = document.getElementById('retrainStatus');
+    
+    // Show loader and disable button
+    loader.style.display = 'block';
+    retrainBtn.classList.add('loading');
+    retrainBtn.disabled = true;
+    retrainStatus.innerHTML = "<p>Retraining in progress...</p>";
+    stepsContainer.innerHTML = "";
+
+    const source = new EventSource("{{ url_for('retrain') }}");
+    source.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (data.progress) {
+            // Show each step
+            const stepP = document.createElement('p');
+            stepP.innerText = data.progress;
+            stepsContainer.appendChild(stepP);
+        }
+        if (data.final) {
+            // Retraining done
+            const finalMsg = document.createElement('div');
+            finalMsg.classList.add('alert', 'alert-success');
+            finalMsg.innerText = data.final;
+            stepsContainer.appendChild(finalMsg);
+            // Hide loader after final
+            loader.style.display = 'none';
+            retrainStatus.innerHTML = "";
+            source.close();
+            retrainBtn.classList.remove('loading');
+            retrainBtn.disabled = false;
+        }
+        if (data.error) {
+            const errorMsg = document.createElement('div');
+            errorMsg.classList.add('alert', 'alert-danger');
+            errorMsg.innerText = data.error;
+            stepsContainer.appendChild(errorMsg);
+            loader.style.display = 'none';
+            retrainStatus.innerHTML = "";
+            source.close();
+            retrainBtn.classList.remove('loading');
+            retrainBtn.disabled = false;
+        }
+    };
+    source.onerror = function(err) {
+        console.error("EventSource error:", err);
+        loader.style.display = 'none';
+        retrainStatus.innerHTML = "";
+        source.close();
+        retrainBtn.classList.remove('loading');
+        retrainBtn.disabled = false;
+    };
+});
+</script>
+{% endblock %}
+  

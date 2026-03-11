@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Clustering - Resume Portal{% endblock %}
+{% block head %}
+<style>
+  h2, h3, h4 {
+    font-weight: 600;
+    color: #2ed3de;
+    margin-bottom: 15px;
+  }
+  #selectedFilesContainer,
+  #resumesList {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .progress-bar {
+    background-color: #337ee9;
+    color: #fff;
+    font-weight: 600;
+  }
+  /* Cluster card styling */
+  .cluster-card .card-header {
+    background: linear-gradient(90deg, #5ccda0, #2ed3de);
+  }
+  .cluster-card a {
+    color: #2ed3de;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .cluster-card a:hover {
+    text-decoration: underline;
+  }
+  /* Summary report styling */
+  .summary-report h4 {
+    color: #5ccda0;
+    font-weight: 700;
+  }
+  .summary-report p,
+  .summary-report li {
+    color: #ccc;
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h2>Upload Resume Folders</h2>
+  <div class="card mb-3">
+    <div class="card-header">Select Resumes</div>
+    <div class="card-body">
+      <label for="folderInput" class="font-weight-bold">Select Folder(s):</label>
+      <input type="file" id="folderInput" webkitdirectory multiple class="form-control">
+      <small class="form-text text-muted">Allowed file types: PDF, DOC, DOCX, TXT.</small>
+    </div>
+  </div>
+
+  <div id="selectedFilesContainer"></div>
+  <button id="uploadBtn" class="btn btn-primary mb-4">Submit Selected Files</button>
+
+  <div id="uploadedFilesContainer" class="mb-5">
+    <h3 class="mb-3">Files in Resumes Folder</h3>
+    <div id="resumesList" class="list-group"></div>
+  </div>
+
+  <hr class="my-4">
+
+  <button id="startClusteringBtn" class="btn btn-success mb-4">Start Clustering</button>
+  <div id="clusteringStatus" style="display:none;">
+    <h4>Clustering Progress</h4>
+    <div class="progress mb-3">
+      <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;">0%</div>
+    </div>
+    <div id="progressMessage" class="mb-3"><p>Starting pipeline...</p></div>
+    <div id="clusteringOutput"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  let selectedFiles = [];
+  const allowedExtensions = ['pdf', 'doc', 'docx', 'txt'];
+
+  // File selection handler (ignoring folder structure)
+  document.getElementById('folderInput').addEventListener('change', function(event) {
+    selectedFiles = [];
+    document.getElementById('selectedFilesContainer').innerHTML = '';
+    const files = event.target.files;
+    const groupName = "Selected Files";
+    const card = document.createElement('div');
+    card.className = 'card';
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'card-header';
+    cardHeader.innerText = groupName;
+    card.appendChild(cardHeader);
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body';
+    const fileList = document.createElement('ul');
+    fileList.className = 'list-group';
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!allowedExtensions.includes(ext)) {
+        console.log(`Skipping file ${file.name}: unsupported file type.`);
+        continue;
+      }
+      selectedFiles.push(file);
+      const listItem = document.createElement('li');
+      listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+      listItem.innerText = file.name;
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'btn btn-sm btn-danger';
+      closeBtn.innerText = 'Remove';
+      closeBtn.addEventListener('click', function() {
+        selectedFiles = selectedFiles.filter(f => f !== file);
+        listItem.remove();
+      });
+      listItem.appendChild(closeBtn);
+      fileList.appendChild(listItem);
+    }
+    cardBody.appendChild(fileList);
+    card.appendChild(cardBody);
+    document.getElementById('selectedFilesContainer').appendChild(card);
+  });
+
+  // Refresh resumes folder list.
+  function refreshResumesList() {
+    fetch('{{ url_for("list_files") }}')
+      .then(response => response.json())
+      .then(data => {
+        const resumesList = document.getElementById('resumesList');
+        resumesList.innerHTML = '';
+        if (data.files && data.files.length > 0) {
+          data.files.forEach(file => {
+            const item = document.createElement('a');
+            item.href = '#';
+            item.className = 'list-group-item list-group-item-action';
+            item.innerText = file;
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-sm btn-danger float-right';
+            removeBtn.innerText = 'Remove';
+            removeBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              fetch('{{ url_for("remove_file") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: file })
+              })
+              .then(response => response.json())
+              .then(res => {
+                if (res.status === 'success') {
+                  refreshResumesList();
+                } else {
+                  alert('Error removing file: ' + res.message);
+                }
+              });
+            });
+            item.appendChild(removeBtn);
+            resumesList.appendChild(item);
+          });
+        } else {
+          resumesList.innerHTML = '<div class="alert alert-info">No files in the resumes folder.</div>';
+        }
+      });
+  }
+  window.addEventListener('load', refreshResumesList);
+
+  // Upload selected files via AJAX.
+  document.getElementById('uploadBtn').addEventListener('click', function(){
+    if (selectedFiles.length === 0) {
+      alert("No files selected.");
+      return;
+    }
+    const formData = new FormData();
+    selectedFiles.forEach(file => {
+      formData.append('files', file, file.name);
+    });
+    fetch('{{ url_for("upload_files") }}', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if(data.status === 'success'){
+        alert("Files uploaded: " + data.copied_files.join(', '));
+        document.getElementById('selectedFilesContainer').innerHTML = '';
+        document.getElementById('folderInput').value = '';
+        refreshResumesList();
+      } else {
+        alert("Error uploading files: " + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert("Error uploading files.");
+    });
+  });
+
+  // Start clustering with SSE for real-time updates.
+  document.getElementById('startClusteringBtn').addEventListener('click', function(){
+    const clusteringStatus = document.getElementById('clusteringStatus');
+    clusteringStatus.style.display = 'block';
+    const progressBar = document.getElementById('progressBar');
+    const progressMessage = document.getElementById('progressMessage');
+    const clusteringOutput = document.getElementById('clusteringOutput');
+    
+    progressBar.style.width = '0%';
+    progressBar.innerText = '0%';
+    progressMessage.innerHTML = "<p>Starting pipeline...</p>";
+    clusteringOutput.innerHTML = "";
+    document.getElementById('startClusteringBtn').disabled = true;
+    
+    const source = new EventSource("{{ url_for('start_clustering') }}");
+    source.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data.progress) {
+        progressMessage.innerHTML += "<p>" + data.progress + "</p>";
+        let currentWidth = parseInt(progressBar.innerText) || 0;
+        currentWidth = Math.min(currentWidth + 10, 100);
+        progressBar.style.width = currentWidth + "%";
+        progressBar.innerText = currentWidth + "%";
+      }
+      if (data.final) {
+        progressBar.style.width = "100%";
+        progressBar.innerText = "100%";
+        let clustersHtml = `<div class='card cluster-card mt-4'>
+                              <div class='card-header'><h4>Clusters</h4></div>
+                              <div class='card-body'>`;
+        for (const cluster in data.final.clusters) {
+          clustersHtml += `<div class='card cluster-card mb-3'>
+                              <div class='card-header'>${cluster}</div>
+                              <div class='card-body' style='max-height: 200px; overflow-y: auto;'>
+                                <ul class='list-group'>`;
+          data.final.clusters[cluster].forEach(file => {
+            clustersHtml += `<li class='list-group-item'>
+                              <a href='/download/${encodeURIComponent(cluster)}/${encodeURIComponent(file)}' target='_blank'>
+                                ${file}
+                              </a>
+                            </li>`;
+          });
+          clustersHtml += `</ul></div></div>`;
+        }
+        clustersHtml += `</div></div>`;
+        clusteringOutput.innerHTML = clustersHtml;
+        clusteringOutput.innerHTML += `<div class='card mt-4 summary-report'>
+                                          <div class='card-header'><h4>Summary Report</h4></div>
+                                          <div class='card-body'>${data.final.summary}</div>
+                                        </div>`;
+        source.close();
+        document.getElementById('startClusteringBtn').disabled = false;
+      }
+      if (data.error) {
+        progressMessage.innerHTML += "<p style='color:red;'>" + data.progress + "</p>";
+        source.close();
+        document.getElementById('startClusteringBtn').disabled = false;
+      }
+    };
+    source.onerror = function(err) {
+      console.error("EventSource error:", err);
+      source.close();
+      document.getElementById('startClusteringBtn').disabled = false;
+    };
+  });
+</script>
+{% endblock %}

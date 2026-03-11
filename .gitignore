@@ -1,0 +1,11 @@
+output/
+__pycache__/
+*.pyc
+.venv/
+.env/
+.ipynb_checkpoints/
+*.log
+*.json
+*.pkl
+*.joblib
+.env
