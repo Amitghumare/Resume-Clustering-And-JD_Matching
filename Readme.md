@@ -193,7 +193,7 @@ Vector Store: FAISS (384-dimension vectors)
 
 
 
-Developed by Gayatri Sanap, Rutik Gunjal, Amit Ghumare.
+Developed by Gayatri Sanap, Rutik Gunjal, Amit Ghumare, Prajwal Supekar.
 
 
 
